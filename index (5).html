@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>DODGE! - FunFunLab</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0f14;color:#e6edf3;font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif}
+  #wrap{position:fixed;inset:0;display:grid;place-items:center}
+  canvas{display:block;touch-action:none}
+  .hint{position:fixed;left:12px;bottom:12px;opacity:.7;font-size:12px}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game"></canvas></div>
+<div class="hint">← → / A D で移動（スマホは左右タップ）</div>
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  // 中央にテキストを描く関数
+  function drawCenter(text, yOffset=0, fontSize=22) {
+    ctx.save();
+    ctx.fillStyle = '#e6edf3';
+    ctx.font = `${fontSize}px system-ui, -apple-system, Segoe UI, Roboto, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, width/2, height/2 + yOffset);
+    ctx.restore();
+  }
+
+  // 画面リサイズ & 高解像度対応
+  const resize = () => {
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const w = Math.max(320, window.innerWidth);
+    const h = Math.max(480, window.innerHeight);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0); // 以降はCSSピクセルで描画
+    width = w; height = h;
+  };
+  let width = 0, height = 0;
+  window.addEventListener('resize', resize, {passive:true});
+  resize();
+
+  // ゲーム状態
+  const player = { x: 160, y: 0, size: 22, speed: 320 };
+  const enemies = [];
+  let running = false;
+  let over = false;
+  let score = 0, hi = Number(localStorage.getItem('dodge-hi')||0);
+  let spawnEvery = 800; // ms
+  let lastSpawn = 0;
+
+  player.y = () => height - 60;
+
+  // 入力
+  const keys = { left:false, right:false };
+  const setKey = (e, down) => {
+    const k = e.key?.toLowerCase();
+    if (['arrowleft','a'].includes(k)) { keys.left = down; e.preventDefault(); }
+    if (['arrowright','d'].includes(k)) { keys.right = down; e.preventDefault(); }
+    if (k === ' ' && down) start();
+  };
+  window.addEventListener('keydown', e => setKey(e,true));
+  window.addEventListener('keyup',   e => setKey(e,false));
+
+  // タッチ（左右ゾーン）
+  const touch = { left:false, right:false };
+  const handleTouches = (e) => {
+    touch.left = touch.right = false;
+    for (const t of e.touches) {
+      if (t.clientX < width/2) touch.left = true; else touch.right = true;
+    }
+    e.preventDefault();
+  };
+  ['touchstart','touchmove'].forEach(ev => canvas.addEventListener(ev, handleTouches, {passive:false}));
+  ['touchend','touchcancel'].forEach(ev => canvas.addEventListener(ev, () => {touch.left=false; touch.right=false;}));
+
+  function start() {
+    if (running) return;
+    running = true;
+    over = false;
+    score = 0;
+    enemies.length = 0;
+    spawnEvery = 800;
+    lastSpawn = 0;
+    player.x = width/2;
+  }
+
+  function gameOver() {
+    running = false;
+    over = true;
+    if (score > hi) { hi = score; localStorage.setItem('dodge-hi', String(hi)); }
+  }
+
+  function spawnEnemy() {
+    const size = 14 + Math.random()*16;
+    const x = Math.random()*(width - size);
+    const speed = 140 + Math.random()* (120 + score*0.6);
+    enemies.push({x, y:-size, size, speed});
+  }
+
+  // ループ
+  let prev = performance.now();
+  function loop(now) {
+    const dt = Math.min(0.033, (now - prev)/1000);
+    prev = now;
+
+    // 背景
+    ctx.fillStyle = '#0b0f14';
+    ctx.fillRect(0,0,width,height);
+
+    // タイトル/待機
+    if (!running) {
+      drawUI();
+      if (!over) drawCenter('Tap/Spaceでスタート', 0, 22);
+      else {
+        drawCenter('GAME OVER', -10, 28);
+        drawCenter('Tap/Spaceでリスタート', 18, 18);
+      }
+      requestAnimationFrame(loop);
+      return;
+    }
+
+    // スコア加算（ミリ秒）
+    score += (dt * 1000) | 0;
+
+    lastSpawn += dt*1000;
+    // 時間経過でスポーン短縮
+    spawnEvery = Math.max(250, 800 - (score*0.3));
+    while (lastSpawn >= spawnEvery) {
+      lastSpawn -= spawnEvery;
+      spawnEnemy();
+    }
+
+    // プレイヤー移動
+    const leftOn  = keys.left || touch.left;
+    const rightOn = keys.right || touch.right;
+    if (leftOn && !rightOn) player.x -= player.speed*dt;
+    if (rightOn && !leftOn) player.x += player.speed*dt;
+    player.x = Math.max(10, Math.min(width-10, player.x));
+
+    // 敵更新
+    for (const e of enemies) {
+      e.y += e.speed*dt;
+    }
+    // 画面外削除
+    for (let i=enemies.length-1; i>=0; i--) if (enemies[i].y > height+50) enemies.splice(i,1);
+
+    // 当たり判定（円に近い簡易判定）
+    const px = player.x, py = player.y();
+    for (const e of enemies) {
+      const dx = Math.abs(e.x + e.size/2 - px);
+      const dy = Math.abs(e.y + e.size/2 - py);
+      const r = (e.size/2) + 14;
+      if (dx*dx + dy*dy < r*r) { gameOver(); break; }
+    }
+
+    // 描画
+    // プレイヤー
+    ctx.fillStyle = '#7ee787';
+    ctx.beginPath();
+    ctx.arc(player.x, player.y(), 14, 0, Math.PI*2);
+    ctx.fill();
+
+    // 敵
+    ctx.fillStyle = '#ff6b6b';
+    for (const e of enemies) ctx.fillRect(e.x, e.y, e.size, e.size);
+
+    drawUI();
+
+    requestAnimationFrame(loop);
+  }
+
+  function drawUI() {
+    // スコア表示
+    ctx.fillStyle = '#e6edf3';
+    ctx.font = '16px system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+    const s = Math.floor(score/10)/100; // 秒（小数2桁）
+    ctx.fillText(`SCORE: ${s.toFixed(2)}s   HI: ${hi ? (hi/100).toFixed(2)+'s' : '0.00s'}`, 12, 24);
+
+    // 下のライン
+    ctx.globalAlpha = .25;
+    ctx.fillRect(0, player.y()+18, width, 2);
+    ctx.globalAlpha = 1;
+  }
+
+  // 自動開始（モバイルは初回タップで音が必要になるが今回は無音）
+  canvas.addEventListener('pointerdown', () => { if (!running) start(); });
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
