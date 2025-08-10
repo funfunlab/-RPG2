@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>タイピングRPG（7歳むけ）</title>
+<style>
+  :root { --bg:#0f172a; --card:#111827; --text:#e5e7eb; --accent:#22d3ee; --ok:#10b981; --ng:#ef4444; }
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, sans-serif;color:var(--text);background:linear-gradient(180deg,#0b1220,#0f172a)}
+  .wrap{max-width:900px;margin:0 auto;padding:24px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  h1{font-size:20px;margin:0;opacity:.9}
+  .card{background:var(--card);border:1px solid #1f2937;border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .hud{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+  .stat{background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:10px;text-align:center}
+  .stat b{font-size:18px}
+  .boss{display:flex;gap:16px;align-items:center;margin-bottom:16px}
+  .boss-emoji{font-size:44px}
+  .bar{flex:1;height:18px;background:#1f2937;border-radius:999px;overflow:hidden;border:1px solid #2b3548}
+  .hp{height:100%;background:linear-gradient(90deg,#ef4444,#fb7185);width:100%;transition:width .2s}
+  .stage{opacity:.85;font-size:14px}
+  .word{font-size:32px;text-align:center;letter-spacing:.05em;margin:12px 0}
+  .kana{opacity:.8;font-size:18px;margin-top:4px}
+  input[type=text]{width:100%;padding:14px 16px;border-radius:12px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;font-size:18px;outline:none}
+  input[type=text].ok{border-color:var(--ok)} input[type=text].ng{border-color:var(--ng)}
+  .row{display:flex;gap:8px;margin-top:12px}
+  button{flex:1;padding:12px;border:1px solid #334155;background:#0b1220;color:var(--text);border-radius:10px;font-size:16px;cursor:pointer}
+  button.primary{background:var(--accent);color:#0b1220;border:none;font-weight:700}
+  .log{margin-top:14px;font-size:14px;opacity:.85;height:58px;overflow:auto}
+  .muted{opacity:.7;font-size:12px;margin-top:8px}
+  @media (max-width:600px){ .hud{grid-template-columns:1fr 1fr} .boss{flex-direction:column;align-items:flex-start} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>⚔️ タイピングRPG（7歳むけ）</h1>
+    <div class="stage">ステージ <span id="stage">1</span> / 5</div>
+  </header>
+
+  <div class="card">
+    <div class="hud">
+      <div class="stat">スコア<br><b id="score">0</b></div>
+      <div class="stat">のこり時間<br><b id="time">60</b> 秒</div>
+      <div class="stat">コンボ<br><b id="combo">0</b></div>
+    </div>
+
+    <div class="boss">
+      <div class="boss-emoji" id="bossEmoji">👹</div>
+      <div class="bar" aria-label="ボスHP">
+        <div id="hp" class="hp" style="width:100%"></div>
+      </div>
+      <div class="stat" style="min-width:86px">HP<br><b id="hpText">100</b></div>
+    </div>
+
+    <div class="word" id="word">スタートをおしてね！</div>
+    <div class="kana" id="kana"></div>
+
+    <input id="answer" type="text" placeholder="ここにタイプしてEnter" inputmode="latin" autocomplete="off" disabled />
+
+    <div class="row">
+      <button id="start" class="primary">▶ スタート</button>
+      <button id="skip">⏭ つぎのことば</button>
+      <button id="reset">🔁 リセット</button>
+    </div>
+
+    <div class="log" id="log"></div>
+    <div class="muted">ヒント：Enterで判定 / まちがえたらもう一度。レベルが上がるほどむずかしくなるよ！</div>
+  </div>
+</div>
+
+<script>
+// JSは省略（全文は前のメッセージ参照）
+</script>
+</body>
+</html>
